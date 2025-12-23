@@ -14,8 +14,8 @@
                     eos vero ea et dolore eirmod et. Dolores diam duo invidunt lorem. Elitr ut dolores magna sit.
                     Sea dolore sanctus sed et. Takimata takimata sanctus sed.
                 </p>
-                <a class="btn btn-dark rounded-pill py-3 px-5 me-3" href="#!">Find Doctor</a>
-                <a class="btn btn-outline-dark rounded-pill py-3 px-5" href="#!">Read More</a>
+                <a class="btn btn-dark rounded-pill py-3 px-5 me-3" href="#!">Doktor Bul</a>
+                <a class="btn btn-outline-dark rounded-pill py-3 px-5" href="#!">Okumaya Devam Et</a>
             </div>
             <div class="col-lg-6">
                 <div class="bg-white text-center rounded p-5">
@@ -24,12 +24,12 @@
                         <div class="row g-3">
                             <div class="col-12 col-sm-6">
                                 <label>Bölüm Seçiniz</label>
-                                @Html.DropDownList("DepartmentId", (List<SelectListItem>)ViewBag.departments, "---Bölüm Seçiniz---", new { @class = "form-control" })
+                                @Html.DropDownList("DepartmentId", (List<SelectListItem>)ViewBag.departments, "---Departman Seçiniz---", new { @class = "form-control" })
                             </div>
                             <div class="col-12 col-sm-6">
                                 <label>Doktor Seçiniz</label>
                                 <select id="DoctorId" name="DoctorId" class="form-control bg-light border-0" style="height: 55px;">
-                                    <option selected>---Önce Bölümü Seçiniz---</option>
+                                    <option selected>---Önce Departman Seçiniz---</option>
 
                                 </select>
                             </div>
@@ -47,22 +47,20 @@
                             </div>
                             <div class="col-12 col-sm-6">
                                 <div class="date" id="date" data-target-input="nearest">
-                                    <input type="text" class="form-control bg-light border-0 datetimepicker-input"
-                                           placeholder="Date" data-target="#date" data-toggle="datetimepicker"
-                                           style="height: 55px;">
+                                    @Html.DropDownList("AppointmentDate", (List<SelectListItem>)ViewBag.dateList, "---Tarih Seçiniz---", new { @class = "form-control" })
                                 </div>
                             </div>
                             <div class="col-12 col-sm-6">
                                 <div class="time" id="time" data-target-input="nearest">
-                                    <input type="text" class="form-control bg-light border-0 datetimepicker-input"
-                                           placeholder="Time" data-target="#time" data-toggle="datetimepicker"
-                                           style="height: 55px;">
+                                    <select id="AppointmentTime" name="AppointmentTime" class="form-control bg-light border-0" style="height: 55px;">
+                                        <option selected>---Önce Tarih Seçiniz---</option>
+
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-12">
                                 <button class="btn btn-primary w-100 py-3" type="submit">
-                                    Make An
-                                    Appointment
+                                    Randevu Oluştur
                                 </button>
                             </div>
                         </div>
@@ -79,8 +77,17 @@
     $(document).ready(function () {
 
         $("#DepartmentId").change(function () {
+
             var selectedDepId = $(this).val();
+
             var doctorDropdown = $("#DoctorId");
+
+
+            $('#AppointmentDate').val('').trigger('change');
+
+            var timeDropdown = $("#AppointmentTime");
+
+            timeDropdown.empty();
 
             $.ajax({
                 url: '/Default/GetDoctorsByDepartmentId',
@@ -89,12 +96,59 @@
                 dataType: 'json',
                 success: function (data) {
                     doctorDropdown.empty();
+
                     $.each(data, function (i, doctor) {
+
                         doctorDropdown.append($('<option> </option>').val(doctor.Value).html(doctor.Text));
                     });
                 }
             })
+
         })
 
-    })
+        $("#AppointmentDate").change(function () {
+
+            var selectedDate = $(this).val();
+
+            var selectedDoctorId = $("#DoctorId").val();
+
+            var timeDropdown = $("#AppointmentTime");
+
+            if (selectedDate === '' && selectedDoctorId === '') {
+                timeDropdown.append('<option>---Önce Doktoru ve Tarihi Seçin</option>');
+            }
+
+            $.ajax({
+                url: '/Default/GetAvailableHours',
+                type: 'POST',
+                dataType: 'json',
+                data: { selectedDate: selectedDate, doctorId: selectedDoctorId },
+                success: function (data) {
+
+                    timeDropdown.empty();
+
+                    $.each(data, function (i, item) {
+
+                        var isDisabled = false;
+                        var optionText = item.Time;
+
+                        if (item.IsBooked) {
+                            optionText += " (Dolu)";
+                            isDisabled = true;
+                        }
+
+                        var option = $('<option> </option>').val(item.Time).html(optionText);
+
+                        if (isDisabled) {
+                            option.prop('disabled', true);
+                        }
+
+                        timeDropdown.append(option);
+                        timeDropdown.prop('disabled', false);
+
+                    });
+                }
+            });
+        });
+    });
 </script>
